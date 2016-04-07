@@ -1,2 +1,3 @@
 # mySnippets
-Simple app for saving snippets
+
+This is Simple app for saving snippets.
