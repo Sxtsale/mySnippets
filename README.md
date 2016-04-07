@@ -2,4 +2,6 @@
 
 This is Simple app for saving snippets.
 
-run composer install, php artisan migrate.
+run in console:
+  - composer install
+  - php artisan migrate
