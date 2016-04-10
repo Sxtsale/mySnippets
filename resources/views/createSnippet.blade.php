@@ -52,21 +52,41 @@
     <div class="row">
         <form class="navbar-form" role="search" name=form1 id=form1 action="/store-snippet">
             <nav class="name_input">
-                <div class="form-group">
+                <div class="form-group{{ $errors->has('name') ? ' has-error' : '' }}">
                     <input type="text" class="form-control" placeholder="Snippet name" name="name" value="{!! old('name') !!}">
+
+                    @if ($errors->has('name'))
+                        <span class="help-block">
+                            <strong>{{ $errors->first('name') }}</strong>
+                        </span>
+                    @endif
                 </div>
             </nav>
 
             <br />
 
             <nav class="name_input">
-                <div class="form-group">
+                <div class="form-group{{ $errors->has('extension') ? ' has-error' : '' }}">
                     <input type="text" class="form-control" placeholder="Filename including extension..." name="extension" value="{!! old('extension') !!}">
+
+                    @if ($errors->has('extension'))
+                        <span class="help-block">
+                            <strong>{{ $errors->first('extension') }}</strong>
+                        </span>
+                    @endif
                 </div>
             </nav>
 
             <nav class="name_input">
-                <textarea class="lined" rows="13" cols="148" name="snippet" >{!! old('snippet') !!}</textarea>
+                <div class="form-group{{ $errors->has('snippet') ? ' has-error' : '' }}">
+                    <textarea class="lined" rows="13" cols="148" name="snippet" >{!! old('snippet') !!}</textarea>
+
+                    @if ($errors->has('snippet'))
+                        <span class="help-block">
+                            <strong>{{ $errors->first('snippet') }}</strong>
+                        </span>
+                    @endif
+                </div>
             </nav>
 
             <br />

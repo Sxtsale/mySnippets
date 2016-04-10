@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use AdamWathan\EloquentOAuth\Facades\OAuth;
 
 use App\Http\Requests;
+use App\Snippets;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -14,12 +15,12 @@ class HomeController extends Controller
 
     public function home()
     {
-        return view('home', ['title' => 'MySnippets - Home page', 'all_snippets' => $this->allUsersSnippets("")]);
+        return view('home', ['title' => 'MySnippets - Home page', 'all_snippets' => $this->allUsersSnippets(0)]);
     }
     
     public function createSnippet()
     {
-        return view('createSnippet', ['title' => 'MySnippets - Create your snippet', 'last_snippets' => $this->allUsersSnippets("LIMIT 4")]);
+        return view('createSnippet', ['title' => 'MySnippets - Create your snippet', 'last_snippets' => $this->allUsersSnippets(4)]);
     }
 
     public function gitHubLogin()
@@ -27,6 +28,11 @@ class HomeController extends Controller
         $this->saveUser();
         
         return redirect('/');
+    }
+
+    public function snippetsModel()
+    {
+        return new Snippets();
     }
 
     public function saveUser()
@@ -58,11 +64,31 @@ class HomeController extends Controller
 
     public function allUsersSnippets($limit)
     {
-        $username = $this->getUsername();
-        
-            $all_snippets = DB::select("SELECT tt.* FROM snippets tt INNER JOIN (SELECT snippet_id, MAX(revision_id) AS revision_id FROM snippets WHERE username = '$username' GROUP BY snippet_id) groupedtt ON tt.snippet_id = groupedtt.snippet_id AND tt.revision_id = groupedtt.revision_id ORDER BY id DESC $limit");
+        $all_snippets = $this->snippetsModel()->where('username', $this->getUsername())->orderBy('id', 'desc')->get();
 
-        return $all_snippets;
+        $snippets = [];
+        $snippetsRevisionId = [];
+
+            foreach ($all_snippets as $snippet){
+                if (!array_key_exists($snippet->snippet_id, $snippetsRevisionId)){
+                    $snippetsRevisionId[$snippet->snippet_id] = -1;
+                    $snippets[$snippet->snippet_id] = -1;
+                }
+                if ($snippetsRevisionId[$snippet->snippet_id] < $snippet->revision_id) {
+                    $snippetsRevisionId[$snippet->snippet_id] = $snippet->revision_id;
+                    $snippets[$snippet->snippet_id] = $snippet;
+                }
+            }
+
+        if ($limit == 0)
+            $limit = count($snippets);
+
+        return $this->returnLimitUsersSnippets($snippets, $limit);
+    }
+
+    public function returnLimitUsersSnippets($snippets, $limit)
+    {
+        return array_slice($snippets, 0, $limit, true);
     }
     
     public function gitHubLogout()

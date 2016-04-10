@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Snippets;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Input;
 use Illuminate\Support\Facades\Validator;
 
@@ -16,42 +15,58 @@ class SnippetsController extends HomeController
         return redirect('mySnipet/'.$snippet_id.'/edit');
     }
 
-    public function validateSnippetInputs($inputs)
+    public function validatorMessages()
     {
-        return Validator::make($inputs,[
+        return [
+            'required'    => 'Polje \':attribute\' je obavezno.',
+        ];
+    }
+
+    public function validatorRules()
+    {
+        return [
             'name' => 'required',
             'extension' => 'required',
             'snippet' => 'required',
-        ]);
+        ];
+    }
+
+    public function validateSnippetInputs($inputs, $rules, $messages)
+    {
+        return Validator::make($inputs, $rules, $messages);
     }
 
     public function saveSnippet($inputs, $username, $last_snippet_id)
     {
-        return Snippets::create([
-            'name' => $inputs['name'],
-            'snippet_id' => $last_snippet_id,
-            'revision_id' => "0",
-            'extension' => $inputs['extension'],
-            'snippet' => $inputs['snippet'],
-            'username' => $username,
-        ]);
+        $snipets = new Snippets();
+
+            $snipets->name = $inputs['name'];
+            $snipets->snippet_id = $last_snippet_id;
+            $snipets->revision_id = "0";
+            $snipets->extension = $inputs['extension'];
+            $snipets->snippet = $inputs['snippet'];
+            $snipets->username = $username;
+
+        $snipets->save();
     }
 
     public function saveUpdateSnippet($inputs, $username, $last_revision_id)
     {
-        Snippets::create([
-            'name' => $inputs['name'],
-            'snippet_id' => $inputs['snippet_id'],
-            'revision_id' => $last_revision_id,
-            'extension' => $inputs['extension'],
-            'snippet' => $inputs['snippet'],
-            'username' => $username,
-        ]);
+        $snipets = $this->snippetsModel();
+
+            $snipets->name = $inputs['name'];
+            $snipets->snippet_id = $inputs['snippet_id'];
+            $snipets->revision_id = $last_revision_id;
+            $snipets->extension = $inputs['extension'];
+            $snipets->snippet = $inputs['snippet'];
+            $snipets->username = $username;
+
+        $snipets->save();
     }
 
     public function deleteSnippet($snippet_id)
     {
-        Snippets::where('snippet_id', $snippet_id)->delete();
+        $this->snippetsModel()->where('snippet_id', $snippet_id)->delete();
 
         return redirect('/')
             ->with(session()->flash('success', 'Uspešno ste obrisali vaš snippet. ('.Input::get('name').')'));
@@ -60,7 +75,9 @@ class SnippetsController extends HomeController
     public function storeSnippet(Request $request)
     {
         $inputs = $request->all();
-        $validator = $this->validateSnippetInputs($inputs);
+        $messages = $this->validatorMessages();
+        $rules = $this->validatorRules();
+        $validator = $this->validateSnippetInputs($inputs, $rules, $messages);
 
         if($validator->fails()){
             return Redirect()->action('HomeController@createSnippet')
@@ -83,7 +100,9 @@ class SnippetsController extends HomeController
     public function updateSnippet(Request $request)
     {
         $inputs = $request->all();
-        $validator = $this->validateSnippetInputs($inputs);
+        $messages = $this->validatorMessages();
+        $rules = $this->validatorRules();
+        $validator = $this->validateSnippetInputs($inputs, $rules, $messages);
         
         if($validator->fails()){
             return Redirect('/mySnippet/'.$inputs['snippet_id'])
@@ -119,7 +138,7 @@ class SnippetsController extends HomeController
 
     public function lastSnippetId()
     {
-        $last_snippet_id = DB::select("SELECT snippet_id FROM snippets ORDER BY snippet_id DESC LIMIT 1");
+        $last_snippet_id = $this->snippetsModel()->orderBy('snippet_id')->get();
 
             if($last_snippet_id == []){
                 $last_snippet_id = "0";
@@ -129,13 +148,12 @@ class SnippetsController extends HomeController
                 }
                 $last_snippet_id++;
             }
-
         return $last_snippet_id;
     }
 
     public function lastRevisionId($snippet_id)
     {
-        $last_revision_id = DB::select("SELECT revision_id FROM snippets WHERE snippet_id = '$snippet_id' ORDER BY revision_id DESC LIMIT 1");
+        $last_revision_id = $this->snippetsModel()->where('snippet_id', $snippet_id)->orderBy('revision_id')->get();
 
             foreach ($last_revision_id as $lri){
                 $last_revision_id = $lri->revision_id;
@@ -178,12 +196,14 @@ class SnippetsController extends HomeController
 
     public function SelectSnippet($snippet_id, $limit)
     {
-        return DB::select("SELECT * FROM snippets WHERE snippet_id = '$snippet_id' ORDER BY revision_id DESC LIMIT $limit");
+        return $this->snippetsModel()->where('snippet_id', $snippet_id)->orderBy('revision_id', 'desc')->take($limit)->get();
     }
 
     public function SelectSnippetRevision($snippet_id, $revision_id)
     {
-        return DB::select("SELECT * FROM snippets WHERE snippet_id = '$snippet_id' AND revision_id = '$revision_id'");
+        return $this->snippetsModel()
+            ->where(['snippet_id' => $snippet_id, 'revision_id' => $revision_id])
+            ->get();
     }
 
     public function checkDifference($i, $name, $extension, $snippet)
@@ -202,7 +222,6 @@ class SnippetsController extends HomeController
                 $difference_snippet[$j] = DifferenceController::toTable(DifferenceController::compare($snippet[$i - $j], $snippet[$i - $j-1]));
             }
         }
-
         return [$difference_name, $difference_extension, $difference_snippet];
     }
 }
